@@ -1,16 +1,264 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width">
-  <title>replit</title>
-  <link href="style.css" rel="stylesheet" type="text/css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Drive PDF Viewer - Client Side</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        #pdfContainer {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ccc;
+            display: none;
+        }
+        #signInButton, #signOutButton {
+            padding: 10px 15px;
+            background-color: #4285f4;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        #signOutButton {
+            background-color: #757575;
+            display: none;
+        }
+        #fileList {
+            margin: 20px 0;
+            padding: 0;
+            list-style: none;
+        }
+        #fileList li {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+        #fileList li:hover {
+            background-color: #f5f5f5;
+        }
+        .loading {
+            text-align: center;
+            margin: 20px 0;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
-
 <body>
-  Hello world
-  <script src="script.js"></script>
+    <h1>Google Drive PDF Viewer</h1>
+    
+    <div id="auth-status">
+        <p>To access PDF files, sign in with a Google account that has access to the shared folder.</p>
+        <button id="signInButton">Sign in with Google</button>
+        <button id="signOutButton">Sign Out</button>
+    </div>
+    
+    <div id="folderInput" class="hidden">
+        <h2>Enter Folder ID</h2>
+        <p>Enter the ID of the Google Drive folder shared with you:</p>
+        <input type="text" id="folderId" placeholder="Folder ID from URL">
+        <button id="loadFolderButton">Load Files</button>
+    </div>
+    
+    <div id="fileListContainer" class="hidden">
+        <h2>PDF Files</h2>
+        <ul id="fileList"></ul>
+    </div>
+    
+    <div id="viewerContainer" class="hidden">
+        <h2 id="currentFile"></h2>
+        <iframe id="pdfContainer" frameborder="0" allowfullscreen></iframe>
+    </div>
+    
+    <!-- Load the Google API client library -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    <!-- Load the Google Identity Services library -->
+    <script src="https://accounts.google.com/gsi/client"></script>
+    
+    <script>
+        // Configuration
+        const CLIENT_ID = '552849071037-oh0ijpvkcjnh9fl0m29gv4p8q23gc2nm.apps.googleusercontent.com'; // Replace with your OAuth client ID
+        const API_KEY = 'AIzaSyAJA1VuGbMKhnU7TCvprbI6nuq4yFo4KhY'; // Replace with your API key
+        const DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
+        const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
+        
+        let tokenClient;
+        let gapiInited = false;
+        let gisInited = false;
+        
+        // Initialize the API client
+        function gapiLoaded() {
+            gapi.load('client', initializeGapiClient);
+        }
+        
+        async function initializeGapiClient() {
+            await gapi.client.init({
+                apiKey: API_KEY,
+                discoveryDocs: DISCOVERY_DOCS,
+            });
+            gapiInited = true;
+            maybeEnableButtons();
+        }
+        
+        // Initialize the Google Identity Services
+        function gisLoaded() {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: '', // Will be set later
+            });
+            gisInited = true;
+            maybeEnableButtons();
+        }
+        
+        function maybeEnableButtons() {
+            if (gapiInited && gisInited) {
+                document.getElementById('signInButton').disabled = false;
+            }
+        }
+        
+        // Handle authentication and authorization
+        document.getElementById('signInButton').addEventListener('click', handleAuthClick);
+        document.getElementById('signOutButton').addEventListener('click', handleSignoutClick);
+        document.getElementById('loadFolderButton').addEventListener('click', handleFolderLoad);
+        
+        function handleAuthClick() {
+            tokenClient.callback = async (resp) => {
+                if (resp.error !== undefined) {
+                    throw resp;
+                }
+                document.getElementById('signInButton').style.display = 'none';
+                document.getElementById('signOutButton').style.display = 'inline-block';
+                document.getElementById('folderInput').classList.remove('hidden');
+                
+                console.log('Signed in successfully');
+            };
+            
+            if (gapi.client.getToken() === null) {
+                tokenClient.requestAccessToken({prompt: 'consent'});
+            } else {
+                tokenClient.requestAccessToken({prompt: ''});
+            }
+        }
+        
+        function handleSignoutClick() {
+            const token = gapi.client.getToken();
+            if (token !== null) {
+                google.accounts.oauth2.revoke(token.access_token);
+                gapi.client.setToken('');
+                document.getElementById('signInButton').style.display = 'inline-block';
+                document.getElementById('signOutButton').style.display = 'none';
+                document.getElementById('folderInput').classList.add('hidden');
+                document.getElementById('fileListContainer').classList.add('hidden');
+                document.getElementById('viewerContainer').classList.add('hidden');
+                document.getElementById('fileList').innerHTML = '';
+            }
+        }
+        
+        function handleFolderLoad() {
+            const folderId = document.getElementById('folderId').value.trim();
+            if (!folderId) {
+                alert('Please enter a valid folder ID.');
+                return;
+            }
+            
+            listFilesInFolder(folderId);
+        }
+        
+        // List PDF files in the specified folder
+        async function listFilesInFolder(folderId) {
+            try {
+                document.getElementById('fileList').innerHTML = '<li class="loading">Loading files...</li>';
+                document.getElementById('fileListContainer').classList.remove('hidden');
+                
+                const response = await gapi.client.drive.files.list({
+                    q: `'${folderId}' in parents and mimeType='application/pdf'`,
+                    fields: 'files(id, name, webContentLink)',
+                    orderBy: 'name'
+                });
+                
+                displayFiles(response.result.files);
+            } catch (error) {
+                document.getElementById('fileList').innerHTML = `<li class="error">Error loading files: ${error.message}</li>`;
+                console.error('Error listing files:', error);
+            }
+        }
+        
+        // Display the list of PDF files
+        function displayFiles(files) {
+            const fileListElement = document.getElementById('fileList');
+            
+            if (!files || files.length === 0) {
+                fileListElement.innerHTML = '<li>No PDF files found in this folder.</li>';
+                return;
+            }
+            
+            const fileItems = files.map(file => {
+                return `<li data-file-id="${file.id}">${file.name}</li>`;
+            }).join('');
+            
+            fileListElement.innerHTML = fileItems;
+            
+            // Add click handlers to each file
+            document.querySelectorAll('#fileList li').forEach(item => {
+                item.addEventListener('click', () => {
+                    const fileId = item.getAttribute('data-file-id');
+                    const fileName = item.innerText;
+                    viewPdf(fileId, fileName);
+                });
+            });
+        }
+        
+        // View a PDF file
+        function viewPdf(fileId, fileName) {
+            document.getElementById('currentFile').innerText = `Viewing: ${fileName}`;
+            document.getElementById('viewerContainer').classList.remove('hidden');
+            
+            const pdfContainer = document.getElementById('pdfContainer');
+            pdfContainer.style.display = 'block';
+            
+            // Use Google Drive's viewer
+            pdfContainer.src = `https://drive.google.com/file/d/${fileId}/preview`;
+        }
+        
+        // Alternative function to download the file directly if needed
+        async function downloadPdf(fileId) {
+            try {
+                // Direct fetch from Google Drive API
+                const response = await gapi.client.drive.files.get({
+                    fileId: fileId,
+                    alt: 'media'
+                });
+                
+                // Create a blob from the response
+                const blob = new Blob([response.body], {type: 'application/pdf'});
+                const url = URL.createObjectURL(blob);
+                
+                // Open the PDF
+                const pdfContainer = document.getElementById('pdfContainer');
+                pdfContainer.src = url;
+                pdfContainer.style.display = 'block';
+            } catch (error) {
+                console.error('Error downloading file:', error);
+            }
+        }
+    </script>
+    
+    <!-- Load the Google API -->
+    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </body>
-
 </html>
