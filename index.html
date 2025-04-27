@@ -291,7 +291,7 @@
         });
 
         // Create a blob from the response
-        const blob = new Blob([response.body], {type: 'application/pdf'});
+        const blob = new Blob([response], {type: 'application/pdf'});
         const url = URL.createObjectURL(blob);
         console.log(url);
 
