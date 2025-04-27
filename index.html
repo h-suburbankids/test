@@ -26,6 +26,9 @@
       align-items: center;
       justify-content: flex-start;
     }
+    
+
+    
 
     .page {
       margin-bottom: 10px;
@@ -33,6 +36,8 @@
       transition: transform 0.3s ease;
     }
 
+
+    
     .sidebar {
       height: 100%;
       background-color: #151515;
@@ -88,6 +93,11 @@
       font-size: 1vw;
       margin-top: 1.667vw;
     }
+
+    .hidden {
+        display: none;
+    }
+    
   </style>
 </head>
 
@@ -102,6 +112,10 @@
     <button id="loadFolderButton">Load Files</button>
   </div>
   <!-- File List Container -->
+  <div id="fileListContainer" class="hidden">
+      <h2>PDF Files</h2>
+      <ul id="fileList"></ul>
+  </div>
   <!-- PDF Viewer Container -->
   <div id="pdf-viewer-container">
     <div class="loading">Loading File...</div>
