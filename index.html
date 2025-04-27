@@ -146,7 +146,7 @@
   <!-- Load the Google API client library,Google Identity Services library, PDF.js libraru -->
   <script src="https://apis.google.com/js/api.js"></script>
   <script src="https://accounts.google.com/gsi/client"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 
   <script>
     // Drive/Google API Configuration
@@ -319,6 +319,7 @@
 
     // LOAD PDF
     function loadPdf(url) {
+      console.log("loading"+url)
       pdfjsLib.getDocument({url: url}).promise
         .then(function (pdf) {
           pdfDoc = pdf;
