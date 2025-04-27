@@ -281,6 +281,9 @@
     }
     async function downloadPdf(fileId) {
       try {
+        // Show loading indicator
+        viewerContainer.innerHTML = '<div class="loading">Loading File...</div>';
+
         // Direct fetch from Google Drive API
         const response = await gapi.client.drive.files.get({
           fileId: fileId,
@@ -291,9 +294,12 @@
         const blob = new Blob([response.body], {type: 'application/pdf'});
         const url = URL.createObjectURL(blob);
         console.log(url);
-        
+
+        // Load and render the PDF with the created URL
+        loadPdf(url);
       } catch (error) {
         console.error('Error downloading file:', error);
+        viewerContainer.innerHTML = '<div class="loading">Error loading PDF: ' + error.message + '</div>';
       }
     }
 
@@ -312,22 +318,17 @@
     let renderedPages = [];
 
     // LOAD PDF
-    pdfjsLib
-      .getDocument({
-        //url: proxyUrl + url,
-        url: url
-        //httpHeaders: {
-        //'Origin': window.location.origin, // Ensure the correct Origin header is included
-        //'X-Requested-With': 'XMLHttpRequest' // Add the X-Requested-With header
-        //}
-      })
-      .promise.then(function (pdf) {
-        pdfDoc = pdf;
-        renderAllPages(); // Render all pages when the PDF is loaded
-      })
-      .catch(function (error) {
-        console.error("Error loading PDF: ", error);
-      });
+    function loadPdf(url) {
+      pdfjsLib.getDocument({url: url}).promise
+        .then(function (pdf) {
+          pdfDoc = pdf;
+          renderAllPages(); // Render all pages when the PDF is loaded
+        })
+        .catch(function (error) {
+          console.error("Error loading PDF: ", error);
+          viewerContainer.innerHTML = '<div class="loading">Error loading PDF: ' + error.message + '</div>';
+        });
+    }
 
     // render all pages
     function renderAllPages() {
