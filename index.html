@@ -125,6 +125,7 @@
 </head>
 
 <body>
+  <!-- Sidebar -->
   <div class="sidebar">
     <button class="zoom-button" id="zoomIn">+</button>
     <button class="zoom-level-button" id="zoom-level">100%</button>
@@ -319,7 +320,7 @@
 
 
 
-
+    // PDF Viewer
 
     const viewerContainer = document.getElementById("pdf-viewer-container");
     const zoomInButton = document.getElementById("zoomIn");
@@ -329,7 +330,7 @@
     let zoom = 1; // Default zoom level
     let renderedPages = [];
 
-    // LOAD PDF
+    // Load PDF
     function loadPdf(data) {
       pdfjsLib.getDocument({
         data: data,
