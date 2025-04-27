@@ -330,14 +330,22 @@
     let renderedPages = [];
 
     // LOAD PDF
-    function loadPdf(url) {
-      console.log("loading"+url)
-      pdfjsLib.getDocument({url: url}).promise
-        .then(function (pdf) {
+    function loadPdf(data) {
+      pdfjsLib.getDocument({
+        data: data,
+        // Add these options for more forgiving parsing
+        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/cmaps/',
+        cMapPacked: true,
+        disableRange: true,
+        disableStream: true,
+        disableAutoFetch: true,
+        isEvalSupported: false
+      }).promise
+        .then(function(pdf) {
           pdfDoc = pdf;
-          renderAllPages(); // Render all pages when the PDF is loaded
+          renderAllPages();
         })
-        .catch(function (error) {
+        .catch(function(error) {
           console.error("Error loading PDF: ", error);
           viewerContainer.innerHTML = '<div class="loading">Error loading PDF: ' + error.message + '</div>';
         });
