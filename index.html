@@ -256,6 +256,22 @@
             });
         });
     }
+    async function downloadPdf(fileId) {
+        try {
+            // Direct fetch from Google Drive API
+            const response = await gapi.client.drive.files.get({
+                fileId: fileId,
+                alt: 'media'
+            });
+
+            // Create a blob from the response
+            const blob = new Blob([response.body], {type: 'application/pdf'});
+            const url = URL.createObjectURL(blob);
+
+        } catch (error) {
+            console.error('Error downloading file:', error);
+        }
+    }
 
 
     const viewerContainer = document.getElementById("pdf-viewer-container");
