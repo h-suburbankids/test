@@ -1,264 +1,375 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Google Drive PDF Viewer - Client Side</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        #pdfContainer {
-            width: 100%;
-            height: 600px;
-            border: 1px solid #ccc;
-            display: none;
-        }
-        #signInButton, #signOutButton {
-            padding: 10px 15px;
-            background-color: #4285f4;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            margin: 10px 0;
-        }
-        #signOutButton {
-            background-color: #757575;
-            display: none;
-        }
-        #fileList {
-            margin: 20px 0;
-            padding: 0;
-            list-style: none;
-        }
-        #fileList li {
-            padding: 10px;
-            border-bottom: 1px solid #eee;
-            cursor: pointer;
-        }
-        #fileList li:hover {
-            background-color: #f5f5f5;
-        }
-        .loading {
-            text-align: center;
-            margin: 20px 0;
-        }
-        .error {
-            color: red;
-            font-weight: bold;
-        }
-        .hidden {
-            display: none;
-        }
-    </style>
+  <meta charset="UTF-8" />
+  <meta user-scalable="no" name="viewport" content="width=device-width, initial-scale=1.0 user-scalable=no" />
+  <title>PDF Viewer</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      height: 100vh;
+    }
+
+    #pdf-viewer-container {
+      height: 100vh;
+      overflow: auto;
+      background-color: #525252;
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+
+    .page {
+      margin-bottom: 10px;
+      display: block;
+      transition: transform 0.3s ease;
+    }
+
+    .sidebar {
+      height: 100%;
+      background-color: #151515;
+      color: #858585;
+      overflow-y: auto;
+      z-index: 10;
+      width: 4.167vw;
+      display: flex;
+      flex-direction: column;
+      padding-top: 0.833vw;
+    }
+
+    .zoom-button {
+      margin: 0.417vw auto;
+      display: block;
+      cursor: pointer;
+      font-size: 0.75vw;
+      padding: 0.417vw;
+      width: 3.333vw;
+      background-color: #444;
+      border: none;
+      color: #adadad;
+      border-radius: 0.21vw;
+    }
+
+    .zoom-button:hover {
+      background-color: #555;
+      color: white;
+    }
+
+    .zoom-level-button {
+      margin-left: 0.417vw auto;
+      display: block;
+      cursor: pointer;
+      font-size: 0.75vw;
+      padding: 0;
+      width: 4.167vw;
+      background-color: #151515;
+      border: none;
+      color: #adadad;
+      border-radius: 0px;
+    }
+
+    #zoom-level {
+      text-align: center;
+      margin: 0.417vw 0;
+      color: #ccc;
+      font-size: 0.667vw;
+    }
+
+    .loading {
+      color: white;
+      font-size: 1vw;
+      margin-top: 1.667vw;
+    }
+  </style>
 </head>
+
 <body>
-    <h1>Google Drive PDF Viewer</h1>
-    
-    <div id="auth-status">
-        <p>To access PDF files, sign in with a Google account that has access to the shared folder.</p>
-        <button id="signInButton">Sign in with Google</button>
-        <button id="signOutButton">Sign Out</button>
-    </div>
-    
-    <div id="folderInput" class="hidden">
-        <h2>Enter Folder ID</h2>
-        <p>Enter the ID of the Google Drive folder shared with you:</p>
-        <input type="text" id="folderId" placeholder="Folder ID from URL">
-        <button id="loadFolderButton">Load Files</button>
-    </div>
-    
-    <div id="fileListContainer" class="hidden">
-        <h2>PDF Files</h2>
-        <ul id="fileList"></ul>
-    </div>
-    
-    <div id="viewerContainer" class="hidden">
-        <h2 id="currentFile"></h2>
-        <iframe id="pdfContainer" frameborder="0" allowfullscreen></iframe>
-    </div>
-    
-    <!-- Load the Google API client library -->
-    <script src="https://apis.google.com/js/api.js"></script>
-    <!-- Load the Google Identity Services library -->
-    <script src="https://accounts.google.com/gsi/client"></script>
-    
-    <script>
-        // Configuration
-        const CLIENT_ID = '552849071037-oh0ijpvkcjnh9fl0m29gv4p8q23gc2nm.apps.googleusercontent.com'; // Replace with your OAuth client ID
-        const API_KEY = 'AIzaSyAJA1VuGbMKhnU7TCvprbI6nuq4yFo4KhY'; // Replace with your API key
-        const DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
-        const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
-        
-        let tokenClient;
-        let gapiInited = false;
-        let gisInited = false;
-        
-        // Initialize the API client
-        function gapiLoaded() {
-            gapi.load('client', initializeGapiClient);
+  <div class="sidebar">
+    <button class="zoom-button" id="zoomIn">+</button>
+    <button class="zoom-level-button" id="zoom-level">100%</button>
+    <button class="zoom-button" id="zoomOut">-</button>
+
+    <button id="signInButton">Sign in with Google</button>
+    <button id="signOutButton">Sign Out</button>
+    <button id="loadFolderButton">Load Files</button>
+  </div>
+  <!-- File List Container -->
+  <!-- PDF Viewer Container -->
+  <div id="pdf-viewer-container">
+    <div class="loading">Loading File...</div>
+  </div>
+  <!-- Load the Google API client library,Google Identity Services library, PDF.js libraru -->
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://accounts.google.com/gsi/client"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+
+  <script>
+    // Drive/Google API Configuration
+    const CLIENT_ID = '552849071037-oh0ijpvkcjnh9fl0m29gv4p8q23gc2nm.apps.googleusercontent.com'; // Replace with your OAuth client ID
+    const API_KEY = 'AIzaSyAJA1VuGbMKhnU7TCvprbI6nuq4yFo4KhY'; // Replace with your API key
+    const DISCOVERY_DOCS = ['https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'];
+    const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
+
+    let tokenClient;
+    let gapiInited = false;
+    let gisInited = false;
+
+    // Initialize the API client
+    function gapiLoaded() {
+        gapi.load('client', initializeGapiClient);
+    }
+
+    async function initializeGapiClient() {
+        await gapi.client.init({
+            apiKey: API_KEY,
+            discoveryDocs: DISCOVERY_DOCS,
+        });
+        gapiInited = true;
+        maybeEnableButtons();
+    }
+    // Initialize the Google Identity Services
+    function gisLoaded() {
+        tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: CLIENT_ID,
+            scope: SCOPES,
+            callback: '', // Will be set later
+        });
+        gisInited = true;
+        maybeEnableButtons();
+    }
+
+    function maybeEnableButtons() {
+        if (gapiInited && gisInited) {
+            document.getElementById('signInButton').disabled = false;
         }
-        
-        async function initializeGapiClient() {
-            await gapi.client.init({
-                apiKey: API_KEY,
-                discoveryDocs: DISCOVERY_DOCS,
+    }
+    // Handle authentication and authorization
+    document.getElementById('signInButton').addEventListener('click', handleAuthClick);
+    document.getElementById('signOutButton').addEventListener('click', handleSignoutClick);
+    document.getElementById('loadFolderButton').addEventListener('click', handleFolderLoad);
+
+    function handleAuthClick() {
+        tokenClient.callback = async (resp) => {
+            if (resp.error !== undefined) {
+                throw resp;
+            }
+            document.getElementById('signInButton').style.display = 'none';
+            document.getElementById('signOutButton').style.display = 'inline-block';
+            document.getElementById('folderInput').classList.remove('hidden');
+
+            console.log('Signed in successfully');
+        };
+
+        if (gapi.client.getToken() === null) {
+            tokenClient.requestAccessToken({prompt: 'consent'});
+        } else {
+            tokenClient.requestAccessToken({prompt: ''});
+        }
+    }
+
+    function handleSignoutClick() {
+        const token = gapi.client.getToken();
+        if (token !== null) {
+            google.accounts.oauth2.revoke(token.access_token);
+            gapi.client.setToken('');
+            document.getElementById('signInButton').style.display = 'inline-block';
+            document.getElementById('signOutButton').style.display = 'none';
+            document.getElementById('folderInput').classList.add('hidden');
+            document.getElementById('fileListContainer').classList.add('hidden');
+            document.getElementById('viewerContainer').classList.add('hidden');
+            document.getElementById('fileList').innerHTML = '';
+        }
+    }
+
+    function handleFolderLoad() {
+        const folderId = "1DS1pTCgmshQREuDIqfEKIvqsskiItt_k";
+        if (!folderId) {
+            alert('Please enter a valid folder ID.');
+            return;
+        }
+
+        listFilesInFolder(folderId);
+    }
+
+    // List PDF files in the specified folder
+    async function listFilesInFolder(folderId) {
+        try {
+            document.getElementById('fileList').innerHTML = '<li class="loading">Loading files...</li>';
+            document.getElementById('fileListContainer').classList.remove('hidden');
+
+            const response = await gapi.client.drive.files.list({
+                q: `'${folderId}' in parents and mimeType='application/pdf'`,
+                fields: 'files(id, name, webContentLink)',
+                orderBy: 'name'
             });
-            gapiInited = true;
-            maybeEnableButtons();
+
+            displayFiles(response.result.files);
+        } catch (error) {
+            document.getElementById('fileList').innerHTML = `<li class="error">Error loading files: ${error.message}</li>`;
+            console.error('Error listing files:', error);
         }
-        
-        // Initialize the Google Identity Services
-        function gisLoaded() {
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: CLIENT_ID,
-                scope: SCOPES,
-                callback: '', // Will be set later
+    }
+
+    // Display the list of PDF files
+    function displayFiles(files) {
+        const fileListElement = document.getElementById('fileList');
+
+        if (!files || files.length === 0) {
+            fileListElement.innerHTML = '<li>No PDF files found in this folder.</li>';
+            return;
+        }
+
+        const fileItems = files.map(file => {
+            return `<li data-file-id="${file.id}">${file.name}</li>`;
+        }).join('');
+
+        fileListElement.innerHTML = fileItems;
+
+        // Add click handlers to each file
+        document.querySelectorAll('#fileList li').forEach(item => {
+            item.addEventListener('click', () => {
+                const fileId = item.getAttribute('data-file-id');
+                const fileName = item.innerText;
+                viewPdf(fileId, fileName);
             });
-            gisInited = true;
-            maybeEnableButtons();
+        });
+    }
+
+
+    const viewerContainer = document.getElementById("pdf-viewer-container");
+    const zoomInButton = document.getElementById("zoomIn");
+    const zoomOutButton = document.getElementById("zoomOut");
+    const zoomLevelDisplay = document.getElementById("zoom-level");
+    let pdfDoc = null;
+    let zoom = 1; // Default zoom level
+    let renderedPages = [];
+
+    // LOAD PDF
+    pdfjsLib
+      .getDocument({
+        //url: proxyUrl + url,
+        url: url
+        //httpHeaders: {
+        //'Origin': window.location.origin, // Ensure the correct Origin header is included
+        //'X-Requested-With': 'XMLHttpRequest' // Add the X-Requested-With header
+        //}
+      })
+      .promise.then(function (pdf) {
+        pdfDoc = pdf;
+        renderAllPages(); // Render all pages when the PDF is loaded
+      })
+      .catch(function (error) {
+        console.error("Error loading PDF: ", error);
+      });
+
+    // render all pages
+    function renderAllPages() {
+      viewerContainer.innerHTML = ""; // clear all viewer containers
+      renderedPages = [];
+
+      for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
+        renderPage(pageNum); // 1by1 render each page
+      }
+    }
+
+    //render a single page
+    function renderPage(pageNum) {
+      pdfDoc.getPage(pageNum).then(function (page) {
+        const viewport = page.getViewport({scale: zoom}); // apply zoom scale
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        canvas.classList.add("page");
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        const renderContext = {
+          canvasContext: context,
+          viewport: viewport,
+        };
+
+        page
+          .render(renderContext)
+          .promise.then(function () {
+            // Append the rendered page to the viewer container
+            viewerContainer.appendChild(canvas);
+            renderedPages.push({pageNum, canvas}); // Save the rendered page and canvas
+          })
+          .catch(function (error) {
+            console.error("Error rendering page " + pageNum + ": " + error);
+          });
+      });
+    }
+    function setZoom(n) {
+      zoom = n;
+      updateZoom(0);
+    }
+    // updat zoom
+    function updateZoom(factor) {
+      zoom += factor; // update zoom
+      renderedPages.forEach(({canvas}, index) => {
+
+        zoomLevelDisplay.textContent = `${Math.round(zoom * 100)}%`;
+
+
+        const scale = zoom;
+
+        // apply scale transform to the canvas WITH smooth transition
+        canvas.style.transition =
+          "width 0.2s ease, height 0.2s ease, margin 0.2s ease"; // smooth transition for transform & marginTop
+        //canvas.style.transform = `scale(${scale})`; // apply the scale transform
+
+        // adjust the canvas width and height based on the zoom factor
+        const originalMarginTop = canvas.style.marginTop;
+        const originalWidth = canvas.width;
+        const originalHeight = canvas.height;
+
+        // adjust the canvas size based on the zoom factor
+        canvas.style.width = `${originalWidth * scale}px`;
+        canvas.style.height = `${originalHeight * scale}px`;
+
+        // adjust the spacing between pages THE BIG ONE !!!!!!!!
+        canvas.style.marginTop = `${scale * 10}px`;
+      });
+    }
+
+    // Zoom In - Function triggered when Zoom In button is clicked
+    zoomInButton.addEventListener("click", () => {
+      console.log("Zoom In clicked");
+      updateZoom(0.05); // Zoom in by 10%
+    });
+
+    // Event listeners
+    zoomInButton.addEventListener("click", () => updateZoom(0.1));
+    zoomOutButton.addEventListener("click", () => updateZoom(-0.1));
+    zoomLevelDisplay.addEventListener("click", () => setZoom(1));
+
+    // Keyboard shortcuts
+    document.addEventListener("keydown", function (event) {
+      if (event.ctrlKey) {
+        if (event.key === "+" || event.key === "=") {
+          event.preventDefault();
+          updateZoom(0.1);
+        } else if (event.key === "-") {
+          event.preventDefault();
+          updateZoom(-0.1);
+        } else if (event.key === "0") {
+          event.preventDefault();
+          zoom = 1;
+          updateZoom(0);
         }
-        
-        function maybeEnableButtons() {
-            if (gapiInited && gisInited) {
-                document.getElementById('signInButton').disabled = false;
-            }
-        }
-        
-        // Handle authentication and authorization
-        document.getElementById('signInButton').addEventListener('click', handleAuthClick);
-        document.getElementById('signOutButton').addEventListener('click', handleSignoutClick);
-        document.getElementById('loadFolderButton').addEventListener('click', handleFolderLoad);
-        
-        function handleAuthClick() {
-            tokenClient.callback = async (resp) => {
-                if (resp.error !== undefined) {
-                    throw resp;
-                }
-                document.getElementById('signInButton').style.display = 'none';
-                document.getElementById('signOutButton').style.display = 'inline-block';
-                document.getElementById('folderInput').classList.remove('hidden');
-                
-                console.log('Signed in successfully');
-            };
-            
-            if (gapi.client.getToken() === null) {
-                tokenClient.requestAccessToken({prompt: 'consent'});
-            } else {
-                tokenClient.requestAccessToken({prompt: ''});
-            }
-        }
-        
-        function handleSignoutClick() {
-            const token = gapi.client.getToken();
-            if (token !== null) {
-                google.accounts.oauth2.revoke(token.access_token);
-                gapi.client.setToken('');
-                document.getElementById('signInButton').style.display = 'inline-block';
-                document.getElementById('signOutButton').style.display = 'none';
-                document.getElementById('folderInput').classList.add('hidden');
-                document.getElementById('fileListContainer').classList.add('hidden');
-                document.getElementById('viewerContainer').classList.add('hidden');
-                document.getElementById('fileList').innerHTML = '';
-            }
-        }
-        
-        function handleFolderLoad() {
-            const folderId = document.getElementById('folderId').value.trim();
-            if (!folderId) {
-                alert('Please enter a valid folder ID.');
-                return;
-            }
-            
-            listFilesInFolder(folderId);
-        }
-        
-        // List PDF files in the specified folder
-        async function listFilesInFolder(folderId) {
-            try {
-                document.getElementById('fileList').innerHTML = '<li class="loading">Loading files...</li>';
-                document.getElementById('fileListContainer').classList.remove('hidden');
-                
-                const response = await gapi.client.drive.files.list({
-                    q: `'${folderId}' in parents and mimeType='application/pdf'`,
-                    fields: 'files(id, name, webContentLink)',
-                    orderBy: 'name'
-                });
-                
-                displayFiles(response.result.files);
-            } catch (error) {
-                document.getElementById('fileList').innerHTML = `<li class="error">Error loading files: ${error.message}</li>`;
-                console.error('Error listing files:', error);
-            }
-        }
-        
-        // Display the list of PDF files
-        function displayFiles(files) {
-            const fileListElement = document.getElementById('fileList');
-            
-            if (!files || files.length === 0) {
-                fileListElement.innerHTML = '<li>No PDF files found in this folder.</li>';
-                return;
-            }
-            
-            const fileItems = files.map(file => {
-                return `<li data-file-id="${file.id}">${file.name}</li>`;
-            }).join('');
-            
-            fileListElement.innerHTML = fileItems;
-            
-            // Add click handlers to each file
-            document.querySelectorAll('#fileList li').forEach(item => {
-                item.addEventListener('click', () => {
-                    const fileId = item.getAttribute('data-file-id');
-                    const fileName = item.innerText;
-                    viewPdf(fileId, fileName);
-                });
-            });
-        }
-        
-        // View a PDF file
-        function viewPdf(fileId, fileName) {
-            document.getElementById('currentFile').innerText = `Viewing: ${fileName}`;
-            document.getElementById('viewerContainer').classList.remove('hidden');
-            
-            const pdfContainer = document.getElementById('pdfContainer');
-            pdfContainer.style.display = 'block';
-            
-            // Use Google Drive's viewer
-            pdfContainer.src = `https://drive.google.com/file/d/${fileId}/preview`;
-        }
-        
-        // Alternative function to download the file directly if needed
-        async function downloadPdf(fileId) {
-            try {
-                // Direct fetch from Google Drive API
-                const response = await gapi.client.drive.files.get({
-                    fileId: fileId,
-                    alt: 'media'
-                });
-                
-                // Create a blob from the response
-                const blob = new Blob([response.body], {type: 'application/pdf'});
-                const url = URL.createObjectURL(blob);
-                
-                // Open the PDF
-                const pdfContainer = document.getElementById('pdfContainer');
-                pdfContainer.src = url;
-                pdfContainer.style.display = 'block';
-            } catch (error) {
-                console.error('Error downloading file:', error);
-            }
-        }
-    </script>
-    
-    <!-- Load the Google API -->
-    <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
-    <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+      }
+    });
+  </script>
+  <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
+  <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 </body>
+
 </html>
