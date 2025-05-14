@@ -1,16 +1,25 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.0/dist/contrib/auto-render.min.js"></script>
   <meta charset="UTF-8" />
   <meta user-scalable="no" name="viewport" content="width=device-width, initial-scale=1.0 user-scalable=no" />
   <title>PDF Viewer with Annotations</title>
   <style>
+    :root {
+      --title-bar-height: 40px;
+      --title-bar-color: #1a1a1a;
+      --pane-border-radius: 8px;
+      --pane-content-background-color: #151515;
+    }
     body {
-      font-family: Arial, sans-serif;
+      font-family: sans-serif;
       margin: 0;
       padding: 0;
-      display: grid;
+      display: block;
       grid-template-columns: auto 1fr;
       min-height: 100vh; /* Use min-height to allow expansion */
       background-color: #525252;
@@ -18,8 +27,7 @@
     }
 
     #pdf-viewer-container {
-      /* Remove the fixed height: 100vh */
-      overflow-y: auto; /* Keep internal scrolling for very long pages if needed */
+      overflow-y: auto;
       background-color: #525252;
       display: flex;
       flex-direction: column;
@@ -27,9 +35,9 @@
       justify-content: flex-start;
       padding: 20px;
       box-sizing: border-box;
-      width: calc(100% - 4vw);
-      margin-left: auto;
-      /* Remove the redundant overflow: scroll */
+      margin-left: calc(4vw + 1.2vw + 20px); /* Account for sidebar width + margin + some padding */
+      width: calc(100% - (4vw + 1.2vw + 20px) - 250px); /* Subtract sidebar and fileListContainer widths */
+      min-height: 100vh;
     }
 
     #fileListContainer {
@@ -59,15 +67,16 @@
     }
 
     .canvas-container {
-      margin-bottom: 20px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      margin-bottom: 1.042vw;
+      box-shadow: 0 0.104vw 0.26vw rgba(0,0,0,0.3);
       position: relative;
       display: block;
     }
 
     .sidebar {
-      height: 94vh;
-      margin-top: 2vh;
+      position: fixed;
+      height: 44vw;
+      margin-top: 1.042vw;
       margin-left: 1.2vw;
       background-color: #151515;
       color: #858585;
@@ -77,7 +86,7 @@
       display: flex;
       flex-direction: column;
       padding-top: 0.833vw;
-      border-radius: 0.5rem;
+      border-radius: 0.417vw
     }
 
     .button {
@@ -94,10 +103,7 @@
       text-align: center;
     }
 
-    .button:hover {
-      background-color: #555;
-      color: white;
-    }
+    
 
     .zoom-level-button {
       margin: 0.417vw auto;
@@ -121,14 +127,14 @@
     }
 
     #fileList {
-      margin: 20px 0;
+      margin: 1.042vw 0;
       padding: 0;
       list-style: none;
     }
 
     #fileList li {
-      padding: 10px;
-      border-bottom: 1px solid #333;
+      padding: 0.521vw;
+      border-bottom: 0.052vw solid #333;
       cursor: pointer;
     }
 
@@ -157,9 +163,9 @@
     }
 
     .toolbar-divider {
-      height: 1px;
+      height: 0.052vw;
       background-color: #333;
-      margin: 10px auto;
+      margin: 0.521vw auto;
       width: 80%;
     }
 
@@ -167,6 +173,131 @@
       margin: 0.417vw auto;
       display: block;
       width: 3.333vw;
+    }
+    
+    
+
+    .pane {
+      position: fixed;
+      width: 400px;
+      height: 750px;
+      border-radius: var(--pane-border-radius);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      top: 50px;
+      right: 50px;
+      z-index: 1;
+    }
+
+    .is-dragging {
+      opacity: 0.9;
+    }
+
+    .pane .title {
+      height: var(--title-bar-height);
+      background-color: var(--title-bar-color);
+      cursor: move;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-top-left-radius: var(--pane-border-radius);
+      border-top-right-radius: var(--pane-border-radius);
+    }
+
+    .pane h2 {
+      font-size: 1rem;
+      font-weight: bold;
+      color: lightseagreen;
+      margin: 0;
+    }
+
+    .pane .content {
+      position: relative;
+      background-color: var(--pane-content-background-color);
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .pane .corner {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 20px;
+      height: 20px;
+      cursor: nwse-resize;
+      background-color: #252525;
+      border-top-left-radius: 8px;
+      z-index: 10;
+    }
+
+    .message-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1em;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .input-area {
+      padding: 12px;
+      background-color: var(--pane-content-background-color);
+      display: flex;
+      gap: 8px;
+      border-top: 1px solid #333;
+    }
+
+    #userInput {
+      flex: 1;
+      padding: 8px;
+      border: none;
+      border-radius: 4px;
+      background-color: #333;
+      color: #d2d2d2;
+    }
+
+    button {
+      padding: 8px 12px;
+      background-color: #2a2a2a;
+      color: #d2d2d2;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #3a3a3a;
+    }
+
+    .user {
+      color: #d2d2d2;
+      text-align: left;
+      margin-bottom: 12px;
+      padding: 8px;
+      background-color: #252525;
+      border-radius: 6px;
+      align-self: flex-start;
+      max-width: 80%;
+    }
+
+    .bot {
+      color: lightseagreen;
+      margin-bottom: 12px;
+      padding: 8px;
+      background-color: #1e3a39;
+      border-radius: 6px;
+      align-self: flex-start;
+      max-width: 80%;
+    }
+
+    img {
+      max-width: 100%;
+      border-radius: 4px;
+      margin-top: 8px;
     }
   </style>
 </head>
@@ -744,6 +875,37 @@
   </script>
   <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
   <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
+
+  
+  <!-- BEGINNING OF AI -->
+
+  
+  <div class="pane" id="chatPane">
+    <div class="title">
+      <h2>Mr. GPT</h2>
+    </div>
+
+    <div class="content">
+      <div id="chatbox" class="message-container">
+        <!-- Chat messages will appear here -->
+      </div>
+
+      <div class="input-area">
+        <input type="text" id="userInput" placeholder="Ask me anything...">
+        <button onclick="sendMessage()">Send</button>
+        <input type="file" id="fileInput" accept="image/*" style="display: none;">
+        <button onclick="openFileExplorer();">Upload</button>
+      </div>
+    </div>
+
+    <div class="corner"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <script src="panes.js"></script>
+  <script src="script.js"></script>
+  
 </body>
 
 </html>
