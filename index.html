@@ -427,17 +427,15 @@
 
     function renderPage(pageNum) {
       pdfDoc.getPage(pageNum).then(function(page) {
-        const viewport = page.getViewport({ scale: 1.0 }); // Use base scale for rendering
-
+        const viewport = page.getViewport({scale: 1.0}); // Use base scale for rendering
+        
         // Create container div to hold both canvas layers
         const container = document.createElement("div");
         container.classList.add("canvas-container", "page");
         container.style.position = "relative";
         container.style.width = `${viewport.width * zoom}px`;
-        // Remove the fixed height that caused the stretching
-        // container.style.height = `${viewport.height * zoom}px`;
-        container.style.marginBottom = `${20 * zoom}px`; // Maintain scaled margin
-
+        container.style.height = `${viewport.height * zoom}px`;
+        
         // Create base canvas (PDF rendering)
         const baseCanvas = document.createElement("canvas");
         baseCanvas.classList.add("pdf-page", "base-layer");
@@ -448,9 +446,9 @@
         baseCanvas.style.left = "0";
         baseCanvas.style.width = "100%";
         baseCanvas.style.height = "100%";
-
+        
         const context = baseCanvas.getContext("2d");
-
+        
         // Create annotation canvas (overlay)
         const annotationCanvas = document.createElement("canvas");
         annotationCanvas.classList.add("annotation-layer");
@@ -462,26 +460,26 @@
         annotationCanvas.style.width = "100%";
         annotationCanvas.style.height = "100%";
         annotationCanvas.style.zIndex = "1"; // Ensure annotation layer is on top
-
+        
         // Render PDF on base canvas
         const renderContext = {
           canvasContext: context,
           viewport: viewport,
         };
-
+        
         page.render(renderContext).promise.then(function() {
           // Setup drawing on annotation layer
           setupAnnotationDrawing(annotationCanvas);
-
+          
           // Append both canvases to container
           container.appendChild(baseCanvas);
           container.appendChild(annotationCanvas);
-
+          
           // Append to viewer
           viewerContainer.appendChild(container);
-
+          
           // Save reference
-          renderedPages.push({ pageNum, container });
+          renderedPages.push({pageNum, container});
         }).catch(function(error) {
           console.error("Error rendering page " + pageNum + ": " + error);
         });
