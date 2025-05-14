@@ -24,6 +24,7 @@
       min-height: 100vh; /* Use min-height to allow expansion */
       background-color: #525252;
       overflow-y: auto; /* Allow vertical scrolling of the whole document */
+      overflow-x: hidden;
     }
 
     #pdf-viewer-container {
@@ -190,7 +191,9 @@
       right: 50px;
       z-index: 1;
     }
-
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
     .is-dragging {
       opacity: 0.9;
     }
