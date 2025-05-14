@@ -10,22 +10,26 @@
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-      overflow: hidden;
       display: grid;
       grid-template-columns: auto 1fr;
-      height: 100vh;
+      min-height: 100vh; /* Use min-height to allow expansion */
       background-color: #525252;
+      overflow-y: auto; /* Allow vertical scrolling of the whole document */
     }
 
     #pdf-viewer-container {
-      height: 100vh;
-      overflow: auto;
+      /* Remove the fixed height: 100vh */
+      overflow-y: auto; /* Keep internal scrolling for very long pages if needed */
       background-color: #525252;
       display: flex;
-      flex: 1;
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
+      padding: 20px;
+      box-sizing: border-box;
+      width: calc(100% - 4vw);
+      margin-left: auto;
+      /* Remove the redundant overflow: scroll */
     }
 
     #fileListContainer {
@@ -55,8 +59,10 @@
     }
 
     .canvas-container {
-      margin-bottom: 10px;
+      margin-bottom: 20px;
       box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      position: relative;
+      display: block;
     }
 
     .sidebar {
@@ -408,21 +414,27 @@
       viewerContainer.innerHTML = ""; // Clear all viewer containers
       renderedPages = [];
 
-      for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
-        renderPage(pageNum);
-      }
+      const renderNextPage = (pageNum) => {
+        if (pageNum <= pdfDoc.numPages) {
+          renderPage(pageNum);
+          // Add small delay between page renders to prevent UI freezing
+          setTimeout(() => renderNextPage(pageNum + 1), 50);
+        }
+      };
+
+      renderNextPage(1);
     }
 
     function renderPage(pageNum) {
       pdfDoc.getPage(pageNum).then(function(page) {
-        const viewport = page.getViewport({scale: zoom});
+        const viewport = page.getViewport({scale: 1.0}); // Use base scale for rendering
         
         // Create container div to hold both canvas layers
         const container = document.createElement("div");
         container.classList.add("canvas-container", "page");
         container.style.position = "relative";
-        container.style.width = `${viewport.width}px`;
-        container.style.height = `${viewport.height}px`;
+        container.style.width = `${viewport.width * zoom}px`;
+        container.style.height = `${viewport.height * zoom}px`;
         
         // Create base canvas (PDF rendering)
         const baseCanvas = document.createElement("canvas");
@@ -652,14 +664,21 @@
       renderedPages.forEach(({container}) => {
         // Get the base canvas within the container
         const baseCanvas = container.querySelector(".base-layer");
+        const annotationCanvas = container.querySelector(".annotation-layer");
         
-        // Apply smooth transition and scale
-        container.style.transition = "width 0.2s ease, height 0.2s ease";
-        container.style.width = `${baseCanvas.width * zoom}px`;
-        container.style.height = `${baseCanvas.height * zoom}px`;
-        
-        // Add spacing between pages
-        container.style.marginBottom = `${zoom * 10}px`;
+        if (baseCanvas && annotationCanvas) {
+          // Get original dimensions
+          const originalWidth = baseCanvas.width;
+          const originalHeight = baseCanvas.height;
+          
+          // Apply smooth transition and scale
+          container.style.transition = "width 0.2s ease, height 0.2s ease";
+          container.style.width = `${originalWidth * zoom}px`;
+          container.style.height = `${originalHeight * zoom}px`;
+          
+          // Add spacing between pages
+          container.style.marginBottom = `${20}px`;
+        }
       });
     }
 
