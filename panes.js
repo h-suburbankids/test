@@ -49,6 +49,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     pane.addEventListener("mousedown", () => {
       i += 1;
+      if(pane.style.top < 0){
+        pane.style.top = 0;
+      }
       pane.style.zIndex = i;
     });
 
@@ -80,6 +83,9 @@ document.addEventListener('DOMContentLoaded', function() {
         pane.classList.remove("is-dragging");
         document.removeEventListener('mousemove', drag);
         document.removeEventListener('mouseup', mouseup);
+        if (pane.style.top < 0){
+          pane.style.top = 0;
+        }
       };
 
       document.addEventListener('mousemove', drag);
