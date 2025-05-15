@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
   panes.forEach(pane => {
     // Initial size
     pane.style.width = '30vw';
-    pane.style.height = '90vh';
+    pane.style.height = '80vh';
 
     // Initial position
     pane.style.left = '67vw';
