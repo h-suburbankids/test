@@ -5,36 +5,75 @@ document.getElementById("userInput").addEventListener("keydown", function (event
   }
 });
 
-// Pane dragging and resizing logic
+// Position and Resize
 document.addEventListener('DOMContentLoaded', function() {
   const panes = document.querySelectorAll('.pane');
   let i = 1;
 
   panes.forEach(pane => {
+    // Initial size
+    pane.style.width = '30vw';
+    pane.style.height = '90vh';
+
+    // Initial position
+    pane.style.left = '67vw';
+    pane.style.top = '5vh';
+  });
+  
+  function pxToVw(px) {
+    return (px / window.innerWidth) * 100;
+  }
+
+  function pxToVh(px) {
+    return (px / window.innerHeight) * 100;
+  }
+
+  //Abandoned
+  function vwToPx(vw) {
+    return (vw / 100) * window.innerWidth;
+  }
+
+  function vhToPx(vh) {
+    return (vh / 100) * window.innerHeight;
+  }
+
+  panes.forEach(pane => {
     const title = pane.querySelector('.title');
     const corner = pane.querySelector('.corner');
 
+    // Note: Using vw/vh for flexible positioning and sizing for a variety of screen sizes and resolutions
+    pane.style.left = pxToVw(pane.offsetLeft) + 'vw';
+    pane.style.top = pxToVh(pane.offsetTop) + 'vh';
+    pane.style.width = pxToVw(pane.offsetWidth) + 'vw';
+    pane.style.height = pxToVh(pane.offsetHeight) + 'vh';
+
     pane.addEventListener("mousedown", () => {
-      i = i + 1;
+      i += 1;
       pane.style.zIndex = i;
     });
 
     title.addEventListener("mousedown", (event) => {
-      // Ignore if clicked on settings button
-      if (event.target.id === 'settingsBtn') {
-        return;
-      }
+      if (event.target.id === 'settingsBtn') return;
 
       pane.classList.add("is-dragging");
-      let l = pane.offsetLeft;
-      let t = pane.offsetTop;
-      let startX = event.pageX;
-      let startY = event.pageY;
+
+      const startX = event.pageX;
+      const startY = event.pageY;
+
+      const initialLeft = pane.getBoundingClientRect().left;
+      const initialTop = pane.getBoundingClientRect().top;
 
       const drag = (event) => {
         event.preventDefault();
-        pane.style.left = l + (event.pageX - startX) + 'px';
-        pane.style.top = t + (event.pageY - startY) + 'px';
+        const dx = event.pageX - startX;
+        const dy = event.pageY - startY;
+
+        const newLeft = pxToVw(initialLeft + dx);
+        const newTop = pxToVh(initialTop + dy);
+
+
+        pane.style.left = newLeft + 'vw';
+        pane.style.top = newTop + 'vh';
       };
 
       const mouseup = () => {
@@ -49,17 +88,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     corner.addEventListener("mousedown", (event) => {
       event.stopPropagation();
-      let w = pane.clientWidth;
-      let h = pane.clientHeight;
-      let startX = event.pageX;
-      let startY = event.pageY;
+
+      const startX = event.pageX;
+      const startY = event.pageY;
+
+      const initialWidth = pane.getBoundingClientRect().width;
+      const initialHeight = pane.getBoundingClientRect().height;
 
       const drag = (event) => {
         event.preventDefault();
-        const newWidth = Math.max(300, w + (event.pageX - startX));
-        const newHeight = Math.max(200, h + (event.pageY - startY));
-        pane.style.width = newWidth + 'px';
-        pane.style.height = newHeight + 'px';
+        const dx = event.pageX - startX;
+        const dy = event.pageY - startY;
+
+        const newWidth = Math.max(200, initialWidth + dx);
+        const newHeight = Math.max(300, initialHeight + dy);
+
+        pane.style.width = pxToVw(newWidth) + 'vw';
+        pane.style.height = pxToVh(newHeight) + 'vh';
       };
 
       const mouseup = () => {
@@ -72,3 +117,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 });
+
