@@ -136,7 +136,6 @@ function createSelectionOverlay() {
 }
 
 function startSelection(e) {
-  if (!isDrawingMode) {
       isSelecting = true;
       const targetCanvasContainer = e.target.closest('.canvas-container');
       if (targetCanvasContainer) {
@@ -161,7 +160,6 @@ function startSelection(e) {
           selectionOverlay.style.height = '0px';
           selectionOverlay.style.display = 'block';
       }
-  }
 }
 
 function updateSelection(e) {
@@ -200,6 +198,7 @@ function finishSelection() {
 }
 
 async function captureSelectedPDFArea() {
+    
     if (!activeCanvasContainer) return;
 
     const rect = selectionOverlay.getBoundingClientRect();
