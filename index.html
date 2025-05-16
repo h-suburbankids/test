@@ -1349,6 +1349,13 @@
       }
   }
 
+  function stopDrawing() {
+    isDrawingMode = false;
+    drawToggleButton.textContent = "Draw";
+    drawToggleButton.style.backgroundColor = "#444";
+    document.body.style.cursor = "default";
+  }
+
   screenshotButton.addEventListener('click', () => {
       // Start selection when the button is clicked
       pdfViewerContainer.addEventListener('mousedown', startSelection);
